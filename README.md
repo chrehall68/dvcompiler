@@ -16,7 +16,17 @@ dvassembler /path/to/assembly.asm > my_memdump.dat
 
 ## Example
 
-Here's an example of a program written in the CS147 DaVinci instruction set.
+Here's an example of a program written in the CS147 DaVinci instruction set. You'll notice some differences
+with this version of assembly compared to standard assembly. For one,
+you must have a label `main` for code that is to be executed upon program load. You **must** define any functions
+your program needs before defining main. If you don't, the code will still get assembled, but the processor will fall off of main and
+start executing any functions defined after it.
+
+Another difference is that the data segment only supports full words. Thus, we don't support any data specifiers like
+`byte` or `half`. To add data, simply label the data and provide the list of words, which must be literals.
+
+One last difference is that each instruction must end with a semicolon,
+and arguments must be comma separated, otherwise the assembler will error.
 
 ```
 // fibonacci recursive
@@ -28,6 +38,11 @@ Here's an example of a program written in the CS147 DaVinci instruction set.
 //    return f(n-2)+f(n-1)
 // n is a parameter in r1
 // return in r0
+
+.data
+A: 1, 2, 3;
+
+.text
 fib:
 // r3 = 1
 sub r3, r3, r3;
@@ -87,11 +102,11 @@ sub r0, r0, r0;
 jr r31;  // jump to return address
 
 main:
-sub r1, r1, r1;
-addi r1, r1, 10;
+la r1, A;
+lw r1, r1, 0;
 jal fib;
 lui r1, 0x100;
 sw r0, r1, 0x0000;
 ```
 
-> Note: Each instruction must end with a semicolon, and arguments must be comma separated, otherwise the assembler will error
+More examples can be found in the examples directory.

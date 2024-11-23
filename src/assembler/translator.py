@@ -197,6 +197,22 @@ def encode_pop():
     return encode_j_type(opcode=OPCODES["pop"])
 
 
+# ==============================
+# Assembler macros
+# ==============================
+def encode_la(reg: str, addr: str):
+    # addr is the 32 bit addr
+    # so we lui the top
+    # and ori the bottom
+    addr = imm_to_binary(addr, 32)
+    result = encode_lui(reg, f"0b{addr[:16]}")
+    result += "\n" + encode("ori", reg, reg, f"0b{addr[16:]}")
+    return result
+
+
+# ==============================
+# Top Level function
+# ==============================
 def encode(inst: str, *args: str) -> str:
     local_dict = {}
     exec(f"f = encode_{inst}", globals(), local_dict)

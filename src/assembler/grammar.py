@@ -23,6 +23,22 @@ class Instruction:
     args: List[Token]
 
 
+@dataclass
+class TextSegment:
+    items: List[Union[Label, Instruction]]
+
+
+@dataclass
+class Data:
+    name: str
+    values: List[Token]
+
+
+@dataclass
+class DataSegment:
+    items: List[Data]
+
+
 def any_of(*items: str):
     items = sorted(list(items), key=len, reverse=True)
     items = "|".join(map(lambda a: f"({a})", items))
@@ -41,7 +57,7 @@ def lex(contents: str) -> List[Token]:
         ),
         (
             "instruction",
-            any_of(*INSTRUCTIONS),
+            any_of(*INSTRUCTIONS, "la"),  # la is recognized by assembler
         ),
         (
             "label",
@@ -71,6 +87,8 @@ def lex(contents: str) -> List[Token]:
             "multiline_comment",
             re.compile(r"\/\*(.*?\n?)*?\*\/"),
         ),
+        ("data", re.compile(r"\.data")),
+        ("text", re.compile(r"\.text")),
     ]
 
     position = 0
@@ -96,8 +114,9 @@ def preprocess(tokens: List[Token]):
     return list(filter(lambda tok: tok.cls not in exclude, tokens))
 
 
-def parse(tokens: List[Token]) -> List[Union[Label, Instruction]]:
+def parse(tokens: List[Token]) -> List[Union[DataSegment, TextSegment]]:
     def parse_label(idx: int) -> Tuple[Optional[Label], int]:
+        # label:
         if (
             tokens[idx].cls != "label"
             or idx + 1 >= len(tokens)
@@ -107,6 +126,7 @@ def parse(tokens: List[Token]) -> List[Union[Label, Instruction]]:
         return Label(tokens[idx].contents), idx + 2
 
     def parse_instruction(idx: int) -> Tuple[Optional[Instruction], int]:
+        # keyword [(literal|register|label) {, (literal|register|label)}];
         if tokens[idx].cls != "instruction":
             return None, idx
         name = tokens[idx].contents
@@ -130,6 +150,36 @@ def parse(tokens: List[Token]) -> List[Union[Label, Instruction]]:
             return None, pos
         return Instruction(name=name, args=args), pos + 1
 
+    def parse_data(idx: int) -> Tuple[Optional[Data], int]:
+        # label: d1 {, d2};
+        if (
+            tokens[idx].cls != "label"
+            or idx + 1 >= len(tokens)
+            or tokens[idx + 1].cls != "colon"
+        ):
+            return None, idx
+        name = tokens[idx].contents
+        idx += 2
+        if tokens[idx].cls != "literal":
+            return None, idx
+        items = []
+        items.append(tokens[idx])
+        idx += 1
+        while idx < len(tokens) and tokens[idx].cls != "semicolon":
+            # take comma
+            if tokens[idx].cls != "comma":
+                return None, idx
+            idx += 1
+            # take data
+            if tokens[idx].cls != "literal":
+                return None, idx
+            items.append(tokens[idx])
+            idx += 1
+        if idx >= len(tokens):
+            return None, idx
+        # otherwise, cur token is semicolon
+        return Data(name, items), idx + 1
+
     def any_of(fns, idx: int):
         latest = idx
         for f in fns:
@@ -139,14 +189,31 @@ def parse(tokens: List[Token]) -> List[Union[Label, Instruction]]:
             latest = max(newIdx, latest)
         return None, latest
 
-    statements = []
-    idx = 0
-    while idx < len(tokens):
-        v, idx = any_of([parse_instruction, parse_label], idx)
-        if v is None:
-            raise Exception(f"Improper statement near {tokens[idx:]}")
-        statements.append(v)
-    return statements
+    def take_items(fns, idx: int):
+        items = []
+        while idx < len(tokens):
+            v, idx = any_of(fns, idx)
+            if v is None:
+                break
+            items.append(v)
+        return items, idx
+
+    def parse_data_segment(idx: int):
+        if idx >= len(tokens) or tokens[idx].cls != "data":
+            return None, idx
+        v, idx = take_items([parse_data], idx + 1)
+        return DataSegment(v), idx
+
+    def parse_text_segment(idx: int):
+        if idx >= len(tokens) or tokens[idx].cls != "text":
+            return None, idx
+        v, idx = take_items([parse_instruction, parse_label], idx + 1)
+        return TextSegment(v), idx
+
+    results, idx = take_items([parse_text_segment, parse_data_segment], 0)
+    if idx < len(tokens):
+        raise Exception(f"Error parsing, near {tokens[idx:]}")
+    return results
 
 
 def process(contents: str):
