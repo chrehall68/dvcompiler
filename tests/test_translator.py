@@ -86,3 +86,8 @@ class TestTranslator:
 
     def test_pop(self):
         assert assembler.encode_pop() == "70000000"
+
+    def test_encode(self):
+        assert assembler.encode("pop") == "70000000"
+        assert assembler.encode("jal", "31") == "0C00001F"
+        assert assembler.encode("andi", "r2", "r3", "-1") == "3062FFFF"

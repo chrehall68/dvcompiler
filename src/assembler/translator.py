@@ -37,16 +37,23 @@ FUNCTS = {
     "srl": bin(int(0x02))[2:].rjust(FUNCT_WIDTH, "0"),
     "jr": bin(int(0x08))[2:].rjust(FUNCT_WIDTH, "0"),
 }
+INSTRUCTIONS = set(OPCODES.keys()) | set(FUNCTS.keys())
 GENERIC_R_TYPES = [key for key in FUNCTS if key not in ["jr", "sll", "srl"]]
 GENERIC_I_TYPES = ["addi", "muli", "andi", "ori", "slti", "beq", "bne", "lw", "sw"]
 
 
 def reg_to_binary(reg_num: str):
+    assert reg_num.startswith("r"), f"Expected register, got {reg_num}"
     return bin(int(reg_num.removeprefix("r")))[2:].rjust(5, "0")
 
 
 def imm_to_binary(imm: str, size: int = IMM_WIDTH):
-    imm = int(imm)
+    if imm.startswith("0x"):
+        imm = int(imm[2:], 16)  # hex
+    elif imm.startswith("0b"):
+        imm = int(imm[2:], 2)  # binary
+    else:  # decimal
+        imm = int(imm)
     if imm < 0:
         tmp = list(map(lambda x: x, bin(imm)[3:].rjust(size, "0")))
         first_one_index = size - 1
@@ -188,3 +195,9 @@ def encode_push():
 
 def encode_pop():
     return encode_j_type(opcode=OPCODES["pop"])
+
+
+def encode(inst: str, *args: str) -> str:
+    local_dict = {}
+    exec(f"f = encode_{inst}", globals(), local_dict)
+    return local_dict["f"](*args)

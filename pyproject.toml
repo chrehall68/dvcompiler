@@ -8,6 +8,8 @@ version = "0.1.0"
 
 dependencies = [
 ]
+[project.scripts]
+dvassembler = "assembler.dvassembler:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
