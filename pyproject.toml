@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "assembler"
+version = "0.1.0"
+
+dependencies = [
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]
