@@ -52,9 +52,17 @@ def assemble(statements: List[Union[Instruction, Label]]) -> str:
     # technically assemblers can do everything in 2 passes
     # but we'll do the translation in a third pass
     results = ["@00001000"]
-    for statement in filtered_statements:
+    sorted_labels = sorted([(idx, label) for label, idx in labels.items()])
+    label_idx = 0
+    for i, statement in enumerate(filtered_statements):
         args = list(map(lambda t: t.contents, statement.args))
-        tmp = encode(statement.name, *args)
-        tmp += f"    // {statement.name} {', '.join(args)}".rstrip() + ";"
-        results.append(tmp)
+        tmp = [encode(statement.name, *args), "    //"]
+        while label_idx < len(sorted_labels) and sorted_labels[label_idx][0] <= i:
+            tmp.append(f" {sorted_labels[label_idx][1]}:")
+            label_idx += 1
+        tmp.append(f" {statement.name}")
+        if len(args) > 0:
+            tmp.append(" " + ", ".join(args))
+        tmp.append(";")
+        results.append("".join(tmp))
     return "\n".join(results)
