@@ -26,6 +26,8 @@ def assemble(segments: List[Union[DataSegment, TextSegment]]) -> str:
                 else:
                     for label in cur_labels:
                         # this is what the label points to
+                        if label in labels:
+                            raise Exception(f"Label {label} already exists")
                         labels[label] = len(filtered_statements)
                     cur_labels = []
                     filtered_statements.append(statement)  # only take instructions
