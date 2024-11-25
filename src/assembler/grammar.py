@@ -81,11 +81,7 @@ def lex(contents: str) -> List[Token]:
         ),
         (
             "comment",
-            re.compile(r"//.*"),
-        ),
-        (
-            "multiline_comment",
-            re.compile(r"\/\*(.*?\n?)*?\*\/"),
+            re.compile(r"#.*"),
         ),
         ("data", re.compile(r"\.data")),
         ("text", re.compile(r"\.text")),
@@ -110,7 +106,7 @@ def lex(contents: str) -> List[Token]:
 
 
 def preprocess(tokens: List[Token]):
-    exclude = {"whitespace", "comment", "multiline_comment"}
+    exclude = {"whitespace", "comment"}
     return list(filter(lambda tok: tok.cls not in exclude, tokens))
 
 
